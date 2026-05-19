@@ -1,0 +1,7 @@
+# Ambientes Virtuais
+venv/
+__pycache__/
+
+# Credenciais e Tokens da API
+credentials.json
+token.json
