@@ -69,7 +69,7 @@ async def prioritize_tasks(request: PrioritizeRequest):
         """
 
         try:
-            llm_response = await client.post(f"{LLM_SERVICE_URL}/generate", json={"prompt": prompt}, timeout=60.0)
+            llm_response = await client.post(f"{LLM_SERVICE_URL}/generate", json={"prompt": prompt}, timeout=180.0)
             llm_response.raise_for_status()
             final_response = llm_response.json().get("response", "Erro na geração")
             return {"prioritized_response": final_response}
