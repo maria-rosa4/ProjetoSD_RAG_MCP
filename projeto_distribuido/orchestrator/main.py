@@ -60,14 +60,43 @@ async def prioritize_tasks(request: PrioritizeRequest):
 
         # 3. Tentar LLM
         prompt = f"""
-        Você é um assistente de priorização.
-        Regras: {context}
-        Tarefas Reais: {tasks}
-        Agenda: {events}
+        Você é um assistente de priorização de tarefas altamente rigoroso.
+        Regras de Negócio (RAG): {context}
+        Tarefas Reais do Usuário (Google Tasks): {tasks}
+        Agenda de Eventos (Google Calendar): {events}
         Pergunta do Usuário: {request.query}
-        Por favor, priorize as tarefas e explique o motivo.
+        
+        Sua missão é cruzar as Regras de Negócio com as Tarefas Reais e organizar a lista.
+        
+        ATENÇÃO À LOGICA DE PRIORIZAÇÃO:
+        1. A tarefa "Passar o Picos para Érica da fisioterapia" envolve saúde, portanto é CRÍTICA, Urgente e Importante. Ela DEVE ser sempre a **Prioridade 1**.
+        2. A tarefa "Inscrever para o trainee da Sydle" tem prazo acadêmico/profissional, logo deve ser a **Prioridade 2**.
+        3. Tarefas como trabalhos escolares ("Trabalho de redação", "Trabalho de geo") são importantes, mas vêm na sequência.
+        4. Informações financeiras ou lembretes sem prazo imediato devem ser listados abaixo.
+        
+        REGRA DE FORMATAÇÃO OBRIGATÓRIA:
+        Você DEVE estruturar sua resposta exatamente no seguinte formato, usando Markdown:
+        
+        Aqui estão as tarefas reais:
+        [Liste as tarefas numeradas de 1 a X]
+        
+        As regras para priorizar tarefas são:
+        * [Lista de regras com marcadores (bullet points)]
+        
+        Agora, vamos priorizar as tarefas!
+        **Prioridade 1:** [Nome da Tarefa]
+        Motivo: [Explicação]
+        
+        **Prioridade 2:** [Nome da Tarefa]
+        Motivo: [Explicação]
+        
+        [Regra para as tarefas não urgentes]
+        
+        **Agenda:** {events}
+        
+        Então, o que você deve fazer hoje?
+        [Lista final numerada com o resumo do que fazer]
         """
-
         try:
             llm_response = await client.post(f"{LLM_SERVICE_URL}/generate", json={"prompt": prompt}, timeout=180.0)
             llm_response.raise_for_status()
