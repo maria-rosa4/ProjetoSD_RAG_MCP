@@ -8,6 +8,19 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+@app.on_event("startup")
+def autenticar_google_no_startup():
+    print("\n" + "="*50)
+    print("Preparando autenticação inicial do Google...")
+    print("="*50 + "\n")
+    try:
+        import tools
+        # Força a verificação e geração do token logo ao ligar o servidor
+        tools.get_credentials()
+        print("Verificação de credenciais concluída com sucesso! Token pronto.")
+    except Exception as e:
+        print(f"Erro na autenticação inicial: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
