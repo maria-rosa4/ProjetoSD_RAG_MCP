@@ -1,234 +1,125 @@
-# ProjetoSD_RAG_MCP
- Desenvolvimento de um sistema inteligente distribuído utilizando RAG (Retrieval-Augmented Generation) e MCP (Model Context Protocol) para resolver um problema do mundo real.
+# Assistente Inteligente de Gestão de Atividades e Priorização de Tarefas (Gamma)
 
-# 🧠 Sistema Inteligente de Priorização de Tarefas
+GCC129 - Sistemas Distribuídos | UFLA (Universidade Federal de Lavras)
 
-## 📌 Descrição
+Desenvolvimento de um sistema inteligente distribuído utilizando RAG (Retrieval-Augmented Generation) e MCP (Model Context Protocol) para resolver o problema real da gestão e priorização de rotinas diárias.
 
-Este projeto consiste no desenvolvimento de um sistema inteligente distribuído capaz de auxiliar usuários na priorização de tarefas diárias, considerando compromissos previamente agendados.
+# 📌 Visão Geral do Projeto
 
-O sistema utiliza conceitos de:
+Este projeto consiste em um assistente cognitivo distribuído capaz de auxiliar usuários na priorização dinâmica de suas tarefas diárias, considerando regras científicas de produtividade (Matriz de Eisenhower) e dados reais de sua agenda física e lista de afazeres.
 
-* Sistemas Distribuídos
-* Inteligência Artificial
-* RAG (Retrieval-Augmented Generation)
-* MCP (Model Context Protocol)
+O sistema é construído inteiramente sob os conceitos modernos de Sistemas Distribuídos, utilizando o padrão de Microsserviços de forma assíncrona, desacoplada e resiliente.
 
----
+# 🧱 Topologia do Ecossistema Distribuído
 
-## 🎯 Objetivo
+Para garantir o desacoplamento e a especialização de responsabilidades, o ecossistema é dividido em 5 microsserviços e 1 cliente frontend estruturados da seguinte forma:
 
-Ajudar o usuário a decidir **o que fazer primeiro**, utilizando:
+Frontend: Localizado na pasta /frontend. Opera na porta de rede padrão 5173. Desenvolvido utilizando React, Vite, TypeScript e Tailwind CSS.
 
-* regras de priorização (base de conhecimento)
-* tarefas do usuário
-* eventos da agenda
+API Gateway: Localizado na pasta /gateway. Opera na porta de rede 8004. Desenvolvido em Python com FastAPI e HTTPX.
 
----
+Orchestrator (Orquestrador): Localizado na pasta /orchestrator. Opera na porta de rede 8000. Desenvolvido em Python com FastAPI, atuando como o cérebro e coordenador do fluxo de execução.
 
-## 🧱 Arquitetura do Sistema
+RAG Service (Serviço RAG): Localizado na pasta /rag_service. Opera na porta de rede 8001. Desenvolvido em Python com FastAPI e banco de dados vetorial ChromaDB.
 
-O sistema é composto por múltiplos componentes:
+MCP Service (Serviço MCP): Localizado na pasta /mcp_service. Opera na porta de rede 8002. Desenvolvido em Python com Google Client SDK para integração direta com as APIs do Google Tasks e Google Calendar.
 
-* **API (FastAPI)** → interface de entrada
-* **Pipeline** → orquestra o fluxo
-* **RAG (ChromaDB)** → recuperação de conhecimento
-* **MCP (tools.py)** → acesso a dados externos (simulados)
-* **LLM (Ollama + Llama3)** → geração de respostas
+LLM Service (Serviço LLM): Localizado na pasta /llm_service. Opera na porta de rede 8003. Desenvolvido em Python utilizando Ollama e o modelo de linguagem local Llama 3.
 
----
 
-## 🔄 Fluxo de Funcionamento
 
-1. O usuário faz uma pergunta
-2. O sistema consulta a base de conhecimento (RAG)
-3. O sistema obtém tarefas e agenda (MCP)
-4. O prompt é construído com todas as informações
-5. O modelo gera uma resposta contextualizada
+# ⚙️ Como Instalar e Executar o Projeto
 
----
+O projeto exige o interpretador Python 3.10+ para o backend e o Node.js (v18+) para o frontend.
 
-## 🧠 RAG (Retrieval-Augmented Generation)
+1. Preparação e Execução do Backend
 
-O sistema utiliza RAG para fornecer ao modelo conhecimento sobre priorização de tarefas.
+Abra o seu terminal na raiz do projeto (projeto_distribuido/):
 
-### Base de conhecimento:
+1.1 Criar e ativar o ambiente virtual (Recomendado)
 
-* tarefas urgentes e importantes devem ser feitas primeiro
-* tarefas importantes devem ser planejadas
-* tarefas urgentes e não importantes podem ser delegadas
-* tarefas não importantes devem ser evitadas
-
----
-
-## 🔗 MCP (Model Context Protocol)
-
-O MCP é utilizado para integrar dados externos ao sistema.
-
-Atualmente, foi implementado de forma simulada:
-
-* `get_tasks()` → retorna lista de tarefas
-* `get_calendar()` → retorna compromissos do dia
-
----
-
-## 🤖 Modelo de Linguagem
-
-O sistema utiliza:
-
-* Ollama
-* Modelo: Llama 3
-
-O modelo é responsável por gerar respostas com base no contexto fornecido.
-
----
-
-## ⚙️ Tecnologias Utilizadas
-
-* Python
-* FastAPI
-* ChromaDB
-* Requests
-* Ollama
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-SistemasDistribuidos/
-│
-├── venv/                # ambiente virtual
-├── rag.py              # recuperação de conhecimento
-├── tools.py            # simulação de ferramentas externas (MCP)
-├── llm.py              # conexão com o modelo
-├── pipeline.py         # lógica principal do sistema
-├── main.py             # API
-```
-
----
-
-## 🚀 Como Executar o Projeto
-
-### 1. Criar ambiente virtual
-
-```
+# Windows:
 python -m venv venv
-```
-
-### 2. Ativar ambiente
-
-Windows:
-
-```
 venv\Scripts\activate
-```
 
-Caso ocorra erro de permissão:
+# Linux / macOS:
+python -m venv venv
+source venv/bin/activate
 
-```
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
 
----
+1.2 Instalar dependências de rede e IA
 
-### 3. Instalar dependências
+pip install -r requirements.txt
 
-```
-pip install fastapi uvicorn chromadb requests
-```
 
----
+(Caso não possua o arquivo unificado, instale manualmente os pacotes principais):
 
-### 4. Instalar e executar o Ollama
+pip install fastapi uvicorn chromadb requests httpx google-auth google-auth-oauthlib google-api-python-client
 
-Baixar:
-https://ollama.com
 
-Verificar instalação:
+1.3 Instalar e executar o Ollama (Llama 3)
 
-```
-ollama --version
-```
+Faça o download do Ollama em ollama.com e inicialize-o.
 
-Baixar modelo:
+Baixe o modelo requerido localmente via terminal:
 
-```
 ollama pull llama3
-```
 
-Executar:
 
-```
-ollama run llama3
-```
+1.4 Configuração das Credenciais do Google MCP
 
----
+Acesse o Google Cloud Console, crie um projeto e habilite a Google Tasks API e a Google Calendar API.
 
-### 5. Testar componentes
+Crie uma tela de consentimento OAuth e gere uma credencial do tipo ID do cliente OAuth (Aplicativo Desktop).
 
-RAG:
+Baixe o arquivo JSON dessas credenciais, renomeie para credentials.json e coloque-o dentro da pasta /mcp_service.
 
-```
-python rag.py
-```
+Nota: Na primeira inicialização, o servidor abrirá uma aba no navegador para que você faça login em sua conta do Google para gravar o token de acesso no arquivo token.json.
 
-MCP:
+1.5 Inicializar todos os Microsserviços
 
-```
-python tools.py
-```
+Para não ter que abrir 5 terminais manualmente, utilize os scripts integrados de lote na pasta raiz:
 
-LLM:
+No Windows:
 
-```
-python llm.py
-```
+start_all.bat
 
-Pipeline:
 
-```
-python pipeline.py
-```
+No Linux / macOS:
 
----
+chmod +x start_all.sh
+./start_all.sh
 
-### 6. Executar API
 
-```
-uvicorn main:app --reload
-```
+# 2. Preparação e Execução do Frontend (React + Vite)
 
-Acessar:
+Navegue até a pasta de interface do usuário (projeto_distribuido/frontend):
 
-```
-http://127.0.0.1:8000/priorizar?pergunta=O que devo fazer hoje?
-```
+cd frontend
 
----
 
-## ⚠️ Observações
+2.1 Instalar dependências do Node.js
 
-* A agenda é tratada como **restrição de tempo**, não como tarefa
-* Apenas tarefas são priorizadas
-* O comportamento do modelo é controlado via engenharia de prompt
+npm install
 
----
 
-## 📌 Próximos Passos
+2.2 Iniciar o servidor de desenvolvimento
 
-* Integração real com Google Calendar e Google Tasks
-* Interface gráfica
-* Aprimoramento da priorização
-* Sugestão automática de horários
+npm run dev
 
----
 
-## 👨‍💻 Autor(es)
+O terminal exibirá o endereço local da interface gráfica, normalmente: 👉 http://localhost:5173
 
-* Maria Clara Souza Rosa
-* Milena de Lourdes Barbosa
-*
-* 
+# 👨‍💻 Grupo e Participantes
 
----
+Este projeto foi apresentado para a banca examinadora da UFLA pelo seguinte grupo de alunos:
+
+Adrielly Ferreira da Silva
+
+Marco Antonio Roquini Espudario
+
+Maria Clara Souza Rosa
+
+Milena de Lourdes Barbosa
+
+Universidade Federal de Lavras — GCC129 (Sistemas Distribuídos)
