@@ -82,7 +82,7 @@ Para não ter que abrir 5 terminais manualmente, utilize os scripts integrados d
 
 No Windows:
 
-start_all.bat
+.\start_all.bat
 
 
 No Linux / macOS:
