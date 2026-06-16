@@ -5,7 +5,6 @@ from datetime import datetime
 import httpx
 import logging
 
-
 # Configuração de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,17 +22,24 @@ app.add_middleware(
 class PrioritizeRequest(BaseModel):
     query: str
 
+
+# MEMÓRIA GLOBAL DO ASSISTENTE
+
+historico_conversa = []
+
 @app.get("/health")
 async def health_check():
     return {"status": "orchestrator is running"}
 
 @app.post("/prioritize")
 async def prioritize_tasks(request: PrioritizeRequest):
+    global historico_conversa
+    
     async with httpx.AsyncClient(timeout=180.0) as client:
         
-        # ==========================================================
+
         # PASSO 1: O PORTEIRO (Classificação de Intenção Binária)
-        # ==========================================================
+
         prompt_classificacao = f"""
         Classifique a seguinte mensagem do usuário com '1' ou '0'.
         
@@ -53,72 +59,76 @@ async def prioritize_tasks(request: PrioritizeRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erro ao classificar intenção: {str(e)}")
 
-        # ==========================================================
         # PASSO 2: A BIFURCAÇÃO (O Guardrail)
-        # ==========================================================
-        
-        # 1. Se a IA devolveu a nossa mensagem de erro customizada, mostra na tela!
+    
         if "[Erro" in intencao:
-            return {"prioritized_response": f"⚠️ Ops! O Porteiro encontrou um problema no motor da IA: {intencao}"}
+            return {"prioritized_response": f"Ops! O Porteiro encontrou um problema no motor da IA: {intencao}"}
 
-        # 2. O Guardrail normal (barra assuntos aleatórios)
         if "0" in intencao or "1" not in intencao:
             resposta_padrao = (
-                "Olá! 🎯 Eu sou um Assistente Especializado em Produtividade.\n\n"
+                "Olá! Eu sou um Assistente Especializado em Produtividade.\n\n"
                 "Meu escopo é estritamente focado em organizar suas tarefas do Google, "
                 "analisar sua agenda e definir prioridades para o seu dia.\n\n"
-                "Infelizmente, não posso ajudar com assuntos externos como previsão do tempo ou conhecimentos gerais. "
                 "Como posso ajudar a organizar seu trabalho hoje?"
             )
             return {"prioritized_response": resposta_padrao}
-
-        # ==========================================================
+        
         # PASSO 3: O FLUXO NORMAL E INTELIGENTE (Tasks + Calendar)
-        # ==========================================================
+
         try:
-            # 1. Puxa o RAG
+            # 1. Puxa os Dados
             rag_response = await client.post("http://127.0.0.1:8001/context", json={"query": request.query})
             contexto_regras = rag_response.json().get("context", "")
 
-            # 2. Puxa o MCP (Google Tasks)
             tasks_response = await client.get("http://127.0.0.1:8002/tasks")
             tarefas_google = tasks_response.json().get("tasks", [])
 
-            # 3. Puxa o MCP (Google Calendar)
             calendar_response = await client.get("http://127.0.0.1:8002/calendar")
             agenda_google = calendar_response.json().get("events", calendar_response.json().get("calendar", []))
 
-            # 4. Monta o Super Prompt Solto Combinando Tudo
+            # 2. Prepara a Data e o Histórico
             data_atual = datetime.now().strftime("%d/%m/%Y")
+            historico_texto = "\n".join(historico_conversa) if historico_conversa else "Nenhuma conversa anterior."
+
+            # 3. Monta o Prompt com Memória
             super_prompt = f"""
             Você é um Assistente Inteligente de Produtividade.
             data de hoje: {data_atual}
+            
+            HISTÓRICO DA CONVERSA:
+            {historico_texto}
             
             DADOS DISPONÍVEIS:
             - Regras de Negócio (RAG): {contexto_regras}
             - Tarefas Pendentes (Google Tasks): {tarefas_google}
             - Compromissos/Eventos da Agenda (Google Calendar): {agenda_google}
             
-            PERGUNTA DO USUÁRIO: "{request.query}"
+            PERGUNTA ATUAL DO USUÁRIO: "{request.query}"
 
-            CRITÉRIOS DE CLASSIFICAÇÃO UNIVERSAL (Atenção máxima aqui):
-            - SAÚDE E BEM-ESTAR (remédios, médicos, fisioterapia, tratamentos) são SEMPRE considerados "Urgentes e Importantes" (Prioridade 1).
-            - COMPROMISSOS COM HORÁRIO (Agenda) para o dia de HOJE são inadiáveis e também Prioridade 1.
-            - DEVERES ACADÊMICOS/PROFISSIONAIS (trabalhos, inscrições, relatórios) são "Importantes", mas vêm depois da saúde (Prioridade 2).
-            - LAZER E ENTRETENIMENTO (videogame, TV) são "Não importantes" e devem ficar para o fim do dia.
+            REGRA DE CLASSIFICAÇÃO OBRIGATÓRIA (Mapeie TODAS as tarefas nestas 4 categorias):
+            1. SAÚDE E BEM-ESTAR (ex: remédios, fisioterapia, médicos, exames, tratamentos): É SEMPRE a Prioridade 1 Máxima.
+            2. COMPROMISSOS DE AGENDA: É Prioridade 1 (Cruze a data de HOJE com a data da Agenda).
+            3. TRABALHO/ESTUDO (ex: infraestrutura, suporte, disciplinas, trainee, projetos): É Prioridade 2 (Importante, mas vem DEPOIS da saúde).
+            4. LAZER (ex: videogame, hobbies, descanso): Prioridade 3 (Não urgente).
             
             INSTRUÇÕES:
-            1. Responda DIRETAMENTE à pergunta do usuário usando os DADOS DISPONÍVEIS (cruze tanto as tarefas quanto os eventos da agenda).
-            2. Se o usuário pedir para listar compromissos ou tarefas de um dia específico, filtre e mostre apenas os daquele dia.
-            3. Se o usuário pedir priorização, crie uma lista usando as Regras de Negócio para ordenar o dia dele.
-            4. Ignore dados ou anotações que não sejam tarefas ou compromissos reais, a menos que o usuário pergunte especificamente.
-            5. Seja direto, conciso e mantenha um tom profissional.
+            1. Leia o HISTÓRICO DA CONVERSA para entender o contexto, mas responda DIRETAMENTE à PERGUNTA ATUAL DO USUÁRIO.
+            2. Se o usuário pedir explicação sobre uma tarefa específica, explique o que ela é e por que tem essa prioridade.
+            3. Você DEVE listar e classificar TODAS as tarefas que vieram do Google Tasks quando solicitado. NUNCA omita ou esconda uma tarefa.
+            4. Seja direto, conciso e mantenha um tom profissional.
             """
             
-            # 5. Chama o LLM para responder
+            # 4. Chama o LLM para responder
             final_response = await client.post("http://127.0.0.1:8003/generate", json={"prompt": super_prompt})
-            
-            return {"prioritized_response": final_response.json().get("response")}
+            resposta_texto = final_response.json().get("response")
+
+            # 5. Salva na memória (limita a 4 mensagens para o prompt não explodir de tamanho)
+            historico_conversa.append(f"Usuário: {request.query}")
+            historico_conversa.append(f"Assistente: {resposta_texto}")
+            if len(historico_conversa) > 4:
+                historico_conversa = historico_conversa[-4:]
+
+            return {"prioritized_response": resposta_texto}
             
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Falha no fluxo de priorização com Tasks/Calendar: {str(e)}")
