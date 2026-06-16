@@ -1,0 +1,19 @@
+# Ambientes Virtuais
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Frontend
+node_modules/
+dist/
+
+# Credenciais e Tokens da API
+credentials.json
+token.json
+
+# Estado local da SAGA
+saga_log.db
+saga_log.db-journal
+projeto_distribuido/orchestrator/saga_log.db
+projeto_distribuido/orchestrator/saga_log.db-journal

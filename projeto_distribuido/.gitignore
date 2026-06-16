@@ -1,0 +1,11 @@
+projeto_distribuido/mcp_service/credentials.json
+projeto_distribuido/mcp_service/token.json
+credentials.json
+token.json
+__pycache__/
+*.pyc
+node_modules/
+frontend/node_modules/
+frontend/dist/
+orchestrator/saga_log.db
+orchestrator/saga_log.db-journal

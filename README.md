@@ -26,209 +26,107 @@ Ajudar o usuário a decidir **o que fazer primeiro**, utilizando:
 
 ---
 
+## 🚀 Diferenciais Técnicos (Requisitos Atendidos)
+
+1.  **Arquitetura de Microserviços:** Sistema totalmente desacoplado com 5 serviços independentes comunicando-se via HTTP/REST.
+2.  **Padrão SAGA (Orquestração):** Coordenação de transações distribuídas com lógica de compensação (rollback) para garantir a consistência do fluxo.
+3.  **RAG (Retrieval-Augmented Generation):** Uso de banco vetorial (ChromaDB) para injetar regras de negócio e metodologias de produtividade no contexto da IA.
+4.  **Integração MCP (Model Context Protocol):** Conexão real com as APIs do Google (Tasks e Calendar) para captura de contexto dinâmico.
+5.  **Gateway Routing:** Ponto de entrada único que protege a topologia interna e gerencia o tráfego.
+
+---
+
 ## 🧱 Arquitetura do Sistema
 
-O sistema é composto por múltiplos componentes:
-
-* **API (FastAPI)** → interface de entrada
-* **Pipeline** → orquestra o fluxo
-* **RAG (ChromaDB)** → recuperação de conhecimento
-* **MCP (tools.py)** → acesso a dados externos (simulados)
-* **LLM (Ollama + Llama3)** → geração de respostas
-
----
-
-## 🔄 Fluxo de Funcionamento
-
-1. O usuário faz uma pergunta
-2. O sistema consulta a base de conhecimento (RAG)
-3. O sistema obtém tarefas e agenda (MCP)
-4. O prompt é construído com todas as informações
-5. O modelo gera uma resposta contextualizada
+| Componente | Função | Porta |
+| :--- | :--- | :--- |
+| **Frontend** | Interface de usuário (React/Vite) | Local |
+| **API Gateway** | Ponto de entrada e roteamento | `8000` |
+| **Orchestrator** | Coordenador da Saga e Lógica de Negócio | `8004` |
+| **RAG Service** | Recuperação semântica (ChromaDB) | `8001` |
+| **MCP Service** | Conector Google SDK (Tasks/Calendar) | `8002` |
+| **LLM Service** | Interface com o motor de IA (Ollama/Llama3) | `8003` |
 
 ---
 
-## 🧠 RAG (Retrieval-Augmented Generation)
+## 🔄 Fluxo de Dados (Padrão SAGA)
 
-O sistema utiliza RAG para fornecer ao modelo conhecimento sobre priorização de tarefas.
+O sistema utiliza o padrão **SAGA Baseado em Orquestração**. O `Orchestrator` gerencia o ciclo de vida da transação:
 
-### Base de conhecimento:
-
-* tarefas urgentes e importantes devem ser feitas primeiro
-* tarefas importantes devem ser planejadas
-* tarefas urgentes e não importantes podem ser delegadas
-* tarefas não importantes devem ser evitadas
+1.  **Início:** O Gateway recebe a pergunta e valida a intenção (Porteiro).
+2.  **Execução:** A `SagaCoordinator` dispara chamadas sequenciais ao RAG, MCP e LLM.
+3.  **Transaction Log:** Cada passo é registrado com um `saga_id` único.
+4.  **Compensação:** Em caso de falha em qualquer microserviço, a Saga executa o fluxo de compensação para manter o sistema em estado consistente.
 
 ---
 
-## 🔗 MCP (Model Context Protocol)
+## 🛠️ Tecnologias Utilizadas
 
-O MCP é utilizado para integrar dados externos ao sistema.
-
-Atualmente, foi implementado de forma simulada:
-
-* `get_tasks()` → retorna lista de tarefas
-* `get_calendar()` → retorna compromissos do dia
-
----
-
-## 🤖 Modelo de Linguagem
-
-O sistema utiliza:
-
-* Ollama
-* Modelo: Llama 3
-
-O modelo é responsável por gerar respostas com base no contexto fornecido.
+*   **Linguagem:** Python 3.11+
+*   **Framework Web:** FastAPI / Uvicorn
+*   **Banco Vetorial:** ChromaDB
+*   **IA/LLM:** Ollama (Llama 3)
+*   **Integrações:** Google Discovery API (OAuth2)
+*   **Frontend:** React + Tailwind CSS
 
 ---
 
-## ⚙️ Tecnologias Utilizadas
+## ⚙️ Como Executar
 
-* Python
-* FastAPI
-* ChromaDB
-* Requests
-* Ollama
+### 1. Preparação do Ambiente
+Instale as dependências coletivas:
+```bash
+pip install fastapi uvicorn httpx chromadb requests google-api-python-client google-auth-oauthlib
+```
+
+### 2. Configuração do Google MCP
+*   Coloque seu arquivo `credentials.json` na pasta `mcp_service/`.
+*   O sistema criará o `token.json` automaticamente no primeiro acesso.
+
+### 3. Inicialização Automatizada
+Para iniciar todos os microserviços simultaneamente:
+*   **Windows:** Execute `start_all.bat`
+*   **Linux/Mac:** Execute `bash start_all.sh`
+
+### 4. Acesso ao Sistema
+Abra o `frontend/index.html` no navegador e interaja com o assistente.
 
 ---
 
-## 📁 Estrutura do Projeto
+## 👨‍💻 Autores
+*   Adrielly Ferreira da Silva
+*   Marco Antonio Roquini Espudario
+*   Maria Clara Souza Rosa
+*   Milena de Lourdes Barbosa
 
-```
-SistemasDistribuidos/
-│
-├── venv/                # ambiente virtual
-├── rag.py              # recuperação de conhecimento
-├── tools.py            # simulação de ferramentas externas (MCP)
-├── llm.py              # conexão com o modelo
-├── pipeline.py         # lógica principal do sistema
-├── main.py             # API
-```
+---
+*Trabalho desenvolvido para a disciplina de Sistemas Distribuídos - 2026.*
 
 ---
 
-## 🚀 Como Executar o Projeto
+## Implementacao local da SAGA
 
-### 1. Criar ambiente virtual
+Na versao local, a SAGA fica implementada em `projeto_distribuido/orchestrator/saga.py`.
+O Orchestrator gera ou recebe um `saga_id`, propaga esse identificador no header
+`X-Saga-Id` e registra o ciclo da requisicao no SQLite local
+`projeto_distribuido/orchestrator/saga_log.db`.
 
+Tabelas criadas automaticamente:
+
+* `sagas` - estado geral da transacao distribuida.
+* `saga_steps` - log das etapas `CLASSIFY_INTENT`, `FETCH_RAG`, `FETCH_TASKS`,
+  `FETCH_CALENDAR`, `SAVE_PRIORITY_PLAN`, `GENERATE_RESPONSE`,
+  `CREATE_GOOGLE_TASK`, `CREATE_CALENDAR_EVENT` e `COMPENSATE`.
+* `priority_plans` - plano de priorizacao salvo localmente.
+* `saga_resources` - recursos criados pela SAGA e status de compensacao.
+
+O plano local e criado como `PENDING` antes da geracao final. Se uma etapa posterior
+falhar, a compensacao marca esse plano como `CANCELLED`. Quando a requisicao pede
+criacao opcional de tarefa ou evento no Google, os recursos sao registrados e podem
+ser removidos pelos endpoints de compensacao do MCP.
+
+Para consultar o log de uma execucao:
+
+```bash
+curl http://127.0.0.1:8004/sagas/SEU_SAGA_ID
 ```
-python -m venv venv
-```
-
-### 2. Ativar ambiente
-
-Windows:
-
-```
-venv\Scripts\activate
-```
-
-Caso ocorra erro de permissão:
-
-```
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
----
-
-### 3. Instalar dependências
-
-```
-pip install fastapi uvicorn chromadb requests
-```
-
----
-
-### 4. Instalar e executar o Ollama
-
-Baixar:
-https://ollama.com
-
-Verificar instalação:
-
-```
-ollama --version
-```
-
-Baixar modelo:
-
-```
-ollama pull llama3
-```
-
-Executar:
-
-```
-ollama run llama3
-```
-
----
-
-### 5. Testar componentes
-
-RAG:
-
-```
-python rag.py
-```
-
-MCP:
-
-```
-python tools.py
-```
-
-LLM:
-
-```
-python llm.py
-```
-
-Pipeline:
-
-```
-python pipeline.py
-```
-
----
-
-### 6. Executar API
-
-```
-uvicorn main:app --reload
-```
-
-Acessar:
-
-```
-http://127.0.0.1:8000/priorizar?pergunta=O que devo fazer hoje?
-```
-
----
-
-## ⚠️ Observações
-
-* A agenda é tratada como **restrição de tempo**, não como tarefa
-* Apenas tarefas são priorizadas
-* O comportamento do modelo é controlado via engenharia de prompt
-
----
-
-## 📌 Próximos Passos
-
-* Integração real com Google Calendar e Google Tasks
-* Interface gráfica
-* Aprimoramento da priorização
-* Sugestão automática de horários
-
----
-
-## 👨‍💻 Autor(es)
-
-* Maria Clara Souza Rosa
-* Milena de Lourdes Barbosa
-*
-* 
-
----
